@@ -93,7 +93,7 @@ void Backlight(bool state) {
 }
 
 void clearData(){
-  while(data_count !=0){
+  while(data_count > 0){
     Data[data_count--] = 0; 
   }
   return;
@@ -178,6 +178,11 @@ void CheckCode() {
         }
   }
   else {
+      Serial.println();
+      Serial.print("Data:   ");
+      Serial.println(Data);
+      Serial.print("Master: ");
+      Serial.println(Master);
       CodeIncorrect();
     }
   lcd.clear();
@@ -209,12 +214,12 @@ void setup() {
   InitializationLCD();
   Serial.begin(9600);
   TimeLastActivity = millis();
+  Serial.print("LCD Backlight: ");
+  Serial.println(LCDBacklightState);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.print("LCD Backlight: ");
-  Serial.println(LCDBacklightState);
   Key = customKeypad.getKey();
   if (LockState && Key == '*') {
     CloseLock();
