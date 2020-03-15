@@ -8,7 +8,7 @@ char Data[19];
 char Master[] = "495876";
 unsigned char data_count = 0;
 char Key;
-bool LockState = false;
+bool LockState = false;qq
 
 const unsigned char ROWS = 4;
 const unsigned char COLS = 3;
@@ -23,7 +23,7 @@ char KeyMap[ROWS][COLS] = {
 byte rowPins[ROWS] = {23, 22, 21, 20};
 byte colPins[COLS] = {19, 18, 8};
 
-// set the LCD address to 0x++27 for a 20 chars 4 line display
+// set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
 //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
