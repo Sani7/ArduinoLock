@@ -3,10 +3,10 @@
 #include <Keypad.h>
 #include <Servo.h>
 
-#define Password_Length 7 
+#define Password_Length 6
 
 char Data[Password_Length]; 
-char Master[Password_Length] = "495876"; 
+char Master[] = "495876";
 byte data_count = 0;
 char Key;
 bool LockState = false;
@@ -68,6 +68,7 @@ void setup() {
   Lock.attach(11);
   Lock.write(180);
   InitializationLCD();
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -77,6 +78,8 @@ void loop() {
     Lock.write(180);
     LockState = false;
     lcd.clear();
+    Serial.println();
+    Serial.println("Closing");
   }
 
   else if (LockState) {
@@ -94,21 +97,37 @@ void loop() {
     if (Key){
       Data[data_count] = Key; 
       lcd.setCursor(data_count,1); 
-      lcd.print("*"); 
-      data_count++; 
+      lcd.print("*");
+      Serial.println();
+      Serial.print("Data_count: ");
+      Serial.println(data_count);
+      Serial.print("Data: ");
+      Serial.println(Data[data_count]);
+      data_count++;
+      
       }
 
-    if(data_count == Password_Length-1){
+    if(data_count == Password_Length){
+      Data[Password_Length] = 0;
       delay(500);
       lcd.clear();
+      Serial.println();
+      Serial.print("Data:   ");
+      Serial.println(Data);
+      Serial.print("Master: ");
+      Serial.println(Master);
 
       if(!strcmp(Data, Master)){
         lcd.print("Correct");
         LockState = true;
         delay(1000);
+        Serial.println();
+        Serial.println("Opened");
         }
       else{
         lcd.print("Incorrect");
+        Serial.println();
+        Serial.println("Incorrect PSWD");
         LockState = false;
         delay(1000);
         }
