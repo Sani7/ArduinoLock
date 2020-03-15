@@ -3,16 +3,15 @@
 #include <Keypad.h>
 #include <Servo.h>
 
-#define Password_Length 6
-
-char Data[Password_Length]; 
+unsigned char Passcode_Length = 6;
+char Data[19]; 
 char Master[] = "495876";
-byte data_count = 0;
+unsigned char data_count = 0;
 char Key;
 bool LockState = false;
 
-const byte ROWS = 4;
-const byte COLS = 3;
+const unsigned char ROWS = 4;
+const unsigned char COLS = 3;
 
 char KeyMap[ROWS][COLS] = {
   {'1', '2', '3'},
@@ -63,6 +62,102 @@ void clearData(){
   return;
 }
 
+char WaitForKey() {
+  char key;
+  key = customKeypad.getKey();
+  while (key == NO_KEY) {
+     key = customKeypad.getKey();
+    }
+  return key;
+}
+
+void GetCode() {
+   if (data_count < 19) {
+    Data[data_count] = Key; 
+    lcd.setCursor(data_count,1); 
+    lcd.print("*");
+    Serial.println();
+    Serial.print("Data_count: ");
+    Serial.println(data_count);
+    Serial.print("Data: ");
+    Serial.println(Data[data_count]);
+    data_count++;
+   }
+   else {
+      lcd.setCursor(data_count,1);
+      lcd.print("*");
+      lcd.setCursor(0, 3);
+      lcd.print("Passcode Overflow");
+      Serial.println();
+      Serial.println("Passcode Overflow");
+      _delay_ms(1000);
+      lcd.clear();
+      clearData();
+   }
+}
+
+void CodeCorrect() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Correct");
+  LockState = true;
+  _delay_ms(1000);
+  Serial.println();
+  Serial.println("Opened");
+}
+
+void CodeIncorrect() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Incorrect");
+  Serial.println();
+  Serial.println("Incorrect PSWD");
+  LockState = false;
+  _delay_ms(1000);
+}
+
+void CheckCode() {
+  if(data_count == Passcode_Length){
+      Data[Passcode_Length] = 0;
+      _delay_ms(500);
+      lcd.clear();
+      Serial.println();
+      Serial.print("Data:   ");
+      Serial.println(Data);
+      Serial.print("Master: ");
+      Serial.println(Master);
+
+      if(!strcmp(Data, Master)){
+          CodeCorrect();
+        }
+
+      else{
+          CodeIncorrect();
+        }
+  }
+  else {
+      CodeIncorrect();
+    }
+  lcd.clear();
+  clearData();
+}
+
+void OpenLock() {
+  Lock.write(90);
+  lcd.setCursor(0,0);
+  lcd.print("Lock Opened");
+  lcd.setCursor(0,2);
+  lcd.print("Press * to lock");
+}
+
+void CloseLock() {
+  Lock.write(180);
+  LockState = false;
+  lcd.clear();
+  Serial.println();
+  Serial.println("Closing");
+}
+
 void setup() {
   // put your setup code here, to run once:
   Lock.attach(11);
@@ -72,69 +167,24 @@ void setup() {
 }
 
 void loop() {
-  Key = customKeypad.getKey();
   // put your main code here, to run repeatedly:
-  if ((LockState) && (Key == '*')) {
-    Lock.write(180);
-    LockState = false;
-    lcd.clear();
-    Serial.println();
-    Serial.println("Closing");
+  Key = customKeypad.getKey();
+  if (LockState && Key == '*') {
+    CloseLock();
+  }
+  
+  else if (LockState) {
+    OpenLock();
   }
 
-  else if (LockState) {
-    lcd.setCursor(0,0);
-    lcd.print("Lock Opened");
-    lcd.setCursor(0,2);
-    lcd.print("Press * to lock");
-    Lock.write(90);
-    }
-  
   else {
     lcd.setCursor(0,0);
-    lcd.print("Enter Password:");
-
-    if (Key){
-      Data[data_count] = Key; 
-      lcd.setCursor(data_count,1); 
-      lcd.print("*");
-      Serial.println();
-      Serial.print("Data_count: ");
-      Serial.println(data_count);
-      Serial.print("Data: ");
-      Serial.println(Data[data_count]);
-      data_count++;
-      
-      }
-
-    if(data_count == Password_Length){
-      Data[Password_Length] = 0;
-      delay(500);
-      lcd.clear();
-      Serial.println();
-      Serial.print("Data:   ");
-      Serial.println(Data);
-      Serial.print("Master: ");
-      Serial.println(Master);
-
-      if(!strcmp(Data, Master)){
-        lcd.print("Correct");
-        LockState = true;
-        delay(1000);
-        Serial.println();
-        Serial.println("Opened");
-        }
-      else{
-        lcd.print("Incorrect");
-        Serial.println();
-        Serial.println("Incorrect PSWD");
-        LockState = false;
-        delay(1000);
-        }
-    
-      lcd.clear();
-      clearData();  
+    lcd.print("Enter Passcode:");
+    if (Key = WaitForKey(); Key == '*') {
+      CheckCode();
+    }
+    else {
+      GetCode();
     }
   }
 }
-
