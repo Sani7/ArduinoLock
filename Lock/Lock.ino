@@ -8,7 +8,7 @@ char Data[19];
 char Master[] = "495876";
 unsigned char data_count = 0;
 char Key;
-bool LockState = false;qq
+bool LockState = false;
 
 const unsigned char ROWS = 4;
 const unsigned char COLS = 3;
@@ -89,7 +89,7 @@ void GetCode() {
       lcd.setCursor(0, 3);
       lcd.print("Passcode Overflow");
       Serial.println();
-      Serial.println("Passcode Overflow");
+      Serial.println("Passcode Overflow Error");
       _delay_ms(1000);
       lcd.clear();
       clearData();
