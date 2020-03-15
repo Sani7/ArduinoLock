@@ -2,13 +2,18 @@
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <Servo.h>
-
+const unsigned long MaxNoActivityMin = 2;
+unsigned long MaxNoActivityMillis = MaxNoActivityMin * 60000;
 unsigned char Passcode_Length = 6;
 char Data[19];
 char Master[] = "495876";
+
 unsigned char data_count = 0;
 char Key;
 bool LockState = false;
+unsigned long TimeLastActivity = 0;
+unsigned long TimeNoActivity = 0;
+bool LCDBacklightState = true;
 
 const unsigned char ROWS = 4;
 const unsigned char COLS = 3;
@@ -55,6 +60,38 @@ void BackLightTest() {
   lcd.backlight();          //backlight on
   }
 
+void ActivityCheck() {
+  if (millis() > TimeLastActivity) {
+    TimeNoActivity = millis() - TimeLastActivity;
+  }
+
+  else {
+    TimeNoActivity = millis() + TimeLastActivity;
+  }
+
+  if ((TimeNoActivity > MaxNoActivityMillis) && LCDBacklightState)  {
+    LCDBacklightState = false;
+    Serial.print("LCD BackLight: ");
+    Serial.println(LCDBacklightState);
+  }
+}
+
+void ActivityReset() {
+  TimeLastActivity = millis();
+  LCDBacklightState = true;
+  Serial.print("LCD BackLight: ");
+  Serial.println(LCDBacklightState);
+}
+
+void Backlight(bool state) {
+  if (state) {
+    lcd.backlight();
+  }
+  else {
+    lcd.noBacklight();
+  }
+}
+
 void clearData(){
   while(data_count !=0){
     Data[data_count--] = 0; 
@@ -67,7 +104,12 @@ char WaitForKey() {
   key = customKeypad.getKey();
   while (key == NO_KEY) {
      key = customKeypad.getKey();
+     ActivityCheck();
+     Backlight(LCDBacklightState);
     }
+  ActivityReset();
+  LCDBacklightState = true;
+  Backlight(LCDBacklightState);
   return key;
 }
 
@@ -148,6 +190,7 @@ void OpenLock() {
   lcd.print("Lock Opened");
   lcd.setCursor(0,2);
   lcd.print("Press * to lock");
+  TimeLastActivity = millis();
 }
 
 void CloseLock() {
@@ -156,6 +199,7 @@ void CloseLock() {
   lcd.clear();
   Serial.println();
   Serial.println("Closing");
+  TimeLastActivity = millis();
 }
 
 void setup() {
@@ -164,10 +208,13 @@ void setup() {
   Lock.write(180);
   InitializationLCD();
   Serial.begin(9600);
+  TimeLastActivity = millis();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  Serial.print("LCD Backlight: ");
+  Serial.println(LCDBacklightState);
   Key = customKeypad.getKey();
   if (LockState && Key == '*') {
     CloseLock();
