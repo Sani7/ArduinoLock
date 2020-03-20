@@ -2,18 +2,32 @@
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
 #include <Servo.h>
+#include <EEPROM.h>
+
+const bool EnablePasscodeChange = true;
+const bool EnableServo = false;
+
 const unsigned long MaxNoActivityMin = 2;
-unsigned long MaxNoActivityMillis = MaxNoActivityMin * 60000;
-unsigned char Passcode_Length = 6;
-char Data[19];
-char Master[] = "495876";
+const unsigned long MaxNoActivityMillis = MaxNoActivityMin * 60000;
+unsigned char PasscodeLength = 4;
+unsigned char Eeprom_PasscodeLength = 0;
+const unsigned char MaxPasscodeLength = 19;
+char Data[MaxPasscodeLength];
+char Master[MaxPasscodeLength] = "1234";
 
 unsigned char data_count = 0;
 char Key;
 bool LockState = false;
+
 unsigned long TimeLastActivity = 0;
 unsigned long TimeNoActivity = 0;
 bool LCDBacklightState = true;
+
+char code_buff1[MaxPasscodeLength];
+unsigned char dataCountBuff1 = 0;
+char code_buff2[MaxPasscodeLength];
+unsigned char dataCountBuff2 = 0;
+unsigned char NewPasscodeLength = 0;
 
 const unsigned char ROWS = 4;
 const unsigned char COLS = 3;
@@ -114,7 +128,7 @@ char WaitForKey() {
 }
 
 void GetCode() {
-   if (data_count < 19) {
+   if (data_count < MaxPasscodeLength) {
     Data[data_count] = Key; 
     lcd.setCursor(data_count,1); 
     lcd.print("*");
@@ -159,8 +173,8 @@ void CodeIncorrect() {
 }
 
 void CheckCode() {
-  if(data_count == Passcode_Length){
-      Data[Passcode_Length] = 0;
+  if(data_count == PasscodeLength){
+      Data[PasscodeLength] = 0;
       _delay_ms(500);
       lcd.clear();
       Serial.println();
@@ -174,6 +188,11 @@ void CheckCode() {
         }
 
       else{
+          Serial.println();
+          Serial.print("PasscodeLength: ");
+          Serial.println(PasscodeLength);
+          Serial.print("DataCount: ");
+          Serial.println(data_count);
           CodeIncorrect();
         }
   }
@@ -183,6 +202,11 @@ void CheckCode() {
       Serial.println(Data);
       Serial.print("Master: ");
       Serial.println(Master);
+      Serial.println();
+      Serial.print("PasscodeLength: ");
+      Serial.println(PasscodeLength);
+      Serial.print("DataCount: ");
+      Serial.println(data_count);
       CodeIncorrect();
     }
   lcd.clear();
@@ -190,16 +214,24 @@ void CheckCode() {
 }
 
 void OpenLock() {
-  Lock.write(90);
+  if (EnableServo) {
+    Lock.write(90);
+  }
   lcd.setCursor(0,0);
   lcd.print("Lock Opened");
   lcd.setCursor(0,2);
-  lcd.print("Press * to lock");
+  lcd.print("Press -* to lock");
+  if (EnablePasscodeChange) {
+    lcd.setCursor(3,3);
+    lcd.print("-# to change code");
+  }
   TimeLastActivity = millis();
 }
 
 void CloseLock() {
-  Lock.write(180);
+  if (EnableServo) {
+    Lock.write(180);
+  }
   LockState = false;
   lcd.clear();
   Serial.println();
@@ -207,10 +239,129 @@ void CloseLock() {
   TimeLastActivity = millis();
 }
 
+void GetEepromCode() {
+   EEPROM.get(0, Eeprom_PasscodeLength);
+   if (Eeprom_PasscodeLength) {
+      NewPasscodeLength = Eeprom_PasscodeLength;
+      for (unsigned char i = 0; i < PasscodeLength; i++) {
+        EEPROM.get(i + 1, Master[i]);
+      }
+   }
+   else {
+    NewPasscodeLength = PasscodeLength;
+    return;
+   }
+   PasscodeLength = NewPasscodeLength;
+}
+
+void WriteEepromCode(){
+  EEPROM.put(0, PasscodeLength);
+  for (unsigned char i = 0; i < PasscodeLength; i++) {
+    EEPROM.put(i + 1, Master[i]);
+  }
+}
+
+void CheckNewCode() {
+  Serial.print("dataCountBuff1: ");
+  Serial.println(dataCountBuff1);
+  Serial.print("dataCountBuff2: ");
+  Serial.println(dataCountBuff2);
+  if (dataCountBuff1 == dataCountBuff2) {
+      if(!strcmp(code_buff1, code_buff2)){
+          NewPasscodeLength = dataCountBuff2;
+          for (unsigned char i = 0; i <= MaxPasscodeLength; i++) {
+            Master[i] = 0;
+          }
+          
+          for (unsigned char i = 0; i <= PasscodeLength; i++) {
+            Master[i] = code_buff1[i];
+          }
+          Serial.println();
+          Serial.print("Master: ");
+          Serial.println(Master);
+          lcd.clear();
+          lcd.print("Passcodes Match");
+          _delay_ms(1000);
+          lcd.clear();
+        }
+     else {
+        NewPasscodeLength = PasscodeLength;
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Codes do not match");
+        Serial.println();
+        Serial.println("Passcodes do not match");
+        _delay_ms(1000);
+        lcd.clear();
+     }
+  }
+  else {
+    NewPasscodeLength = PasscodeLength;
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Codes do not match");
+    Serial.println();
+    Serial.println("Passcodes are not the same length");
+    _delay_ms(1000);
+    lcd.clear();
+  }
+  clearData();
+}
+
+void ChangeCode() {
+    dataCountBuff1 = 0;
+    dataCountBuff2 = 0;
+    for (unsigned char i = 0; i <= MaxPasscodeLength; i++) {
+      code_buff1[i] = 0;
+      code_buff2[i] = 0;
+    }
+    Serial.println();
+    Serial.println("Changing Master");
+    lcd.clear();
+    lcd.print("Enter new code:");
+    lcd.setCursor(0,2);
+    lcd.print("press * to confirm");
+    Key = WaitForKey();
+    while(Key != '*') {
+      GetCode();
+      Key = WaitForKey();
+    }
+    Data[data_count] = 0;
+    dataCountBuff1 = data_count;
+    for (unsigned char i =0; i <= data_count; i++) {
+      code_buff1[i] = Data[i];
+    }
+    clearData();
+    lcd.clear();
+    _delay_ms(500);
+    lcd.print("Confirm new code:");
+    lcd.setCursor(0,2);
+    lcd.print("press * to confirm");
+    Key = WaitForKey();
+    while (Key != '*') {
+      GetCode();
+      Key = WaitForKey();
+    }
+    Data[data_count] = 0;
+    dataCountBuff2 = data_count;
+    for (unsigned char i =0; i <= data_count; i++) {
+      code_buff2[i] = Data[i];
+    }
+    clearData();
+    CheckNewCode();
+    PasscodeLength = NewPasscodeLength;
+    Serial.print("PasscodeLength: ");
+    Serial.println(PasscodeLength);
+    WriteEepromCode();
+}
+
 void setup() {
   // put your setup code here, to run once:
-  Lock.attach(11);
-  Lock.write(180);
+  GetEepromCode();
+  if (EnableServo) {
+    Lock.attach(11);
+    Lock.write(180);
+  }
   InitializationLCD();
   Serial.begin(9600);
   TimeLastActivity = millis();
@@ -223,6 +374,10 @@ void loop() {
   Key = customKeypad.getKey();
   if (LockState && Key == '*') {
     CloseLock();
+  }
+
+  else if (LockState && Key == '#' && EnablePasscodeChange) {
+    ChangeCode();
   }
   
   else if (LockState) {
