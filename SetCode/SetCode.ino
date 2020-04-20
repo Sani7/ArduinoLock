@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 
-const unsigned char PasscodeLength = 6;
-const char Master[] = "495876";
+const unsigned char PasscodeLength = 4;
+const char Master[] = "1234";
 
 void setup() {
   // put your setup code here, to run once:
