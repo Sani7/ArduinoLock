@@ -5,7 +5,8 @@
 #include <EEPROM.h>
 
 const bool EnablePasscodeChange = true;
-const bool EnableServo = false;
+const bool EnableServo = true;
+const bool EnableDebug = false;
 
 const unsigned long MaxNoActivityMin = 2;
 const unsigned long MaxNoActivityMillis = MaxNoActivityMin * 60000;
@@ -85,16 +86,20 @@ void ActivityCheck() {
 
   if ((TimeNoActivity > MaxNoActivityMillis) && LCDBacklightState)  {
     LCDBacklightState = false;
-    Serial.print("LCD BackLight: ");
-    Serial.println(LCDBacklightState);
+    if (EnableDebug) {
+      Serial.print("LCD BackLight: ");
+      Serial.println(LCDBacklightState);
+    }
   }
 }
 
 void ActivityReset() {
   TimeLastActivity = millis();
   LCDBacklightState = true;
-  Serial.print("LCD BackLight: ");
-  Serial.println(LCDBacklightState);
+  if (EnableDebug) {
+    Serial.print("LCD BackLight: ");
+    Serial.println(LCDBacklightState);
+  }
 }
 
 void Backlight(bool state) {
@@ -132,11 +137,13 @@ void GetCode() {
     Data[data_count] = Key; 
     lcd.setCursor(data_count,1); 
     lcd.print("*");
-    Serial.println();
-    Serial.print("Data_count: ");
-    Serial.println(data_count);
-    Serial.print("Data: ");
-    Serial.println(Data[data_count]);
+    if (EnableDebug) {
+      Serial.println();
+      Serial.print("Data_count: ");
+      Serial.println(data_count);
+      Serial.print("Data: ");
+      Serial.println(Data[data_count]);
+    }
     data_count++;
    }
    else {
@@ -144,8 +151,10 @@ void GetCode() {
       lcd.print("*");
       lcd.setCursor(0, 3);
       lcd.print("Passcode Overflow");
-      Serial.println();
-      Serial.println("Passcode Overflow Error");
+      if (EnableDebug) {
+        Serial.println();
+        Serial.println("Passcode Overflow Error");
+      }
       _delay_ms(1000);
       lcd.clear();
       clearData();
@@ -158,16 +167,20 @@ void CodeCorrect() {
   lcd.print("Correct");
   LockState = true;
   _delay_ms(1000);
-  Serial.println();
-  Serial.println("Opened");
+  if (EnableDebug) {
+    Serial.println();
+    Serial.println("Opened");
+  }
 }
 
 void CodeIncorrect() {
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Incorrect");
-  Serial.println();
-  Serial.println("Incorrect PSWD");
+  if (EnableDebug) {
+    Serial.println();
+    Serial.println("Incorrect PSWD");
+  }
   LockState = false;
   _delay_ms(1000);
 }
@@ -177,36 +190,41 @@ void CheckCode() {
       Data[PasscodeLength] = 0;
       _delay_ms(500);
       lcd.clear();
-      Serial.println();
-      Serial.print("Data:   ");
-      Serial.println(Data);
-      Serial.print("Master: ");
-      Serial.println(Master);
-
+      if (EnableDebug) {
+        Serial.println();
+        Serial.print("Data:   ");
+        Serial.println(Data);
+        Serial.print("Master: ");
+        Serial.println(Master);
+      }
       if(!strcmp(Data, Master)){
           CodeCorrect();
         }
 
       else{
-          Serial.println();
-          Serial.print("PasscodeLength: ");
-          Serial.println(PasscodeLength);
-          Serial.print("DataCount: ");
-          Serial.println(data_count);
+          if (EnableDebug) {
+            Serial.println();
+            Serial.print("PasscodeLength: ");
+            Serial.println(PasscodeLength);
+            Serial.print("DataCount: ");
+            Serial.println(data_count);
+          }
           CodeIncorrect();
         }
   }
   else {
-      Serial.println();
-      Serial.print("Data:   ");
-      Serial.println(Data);
-      Serial.print("Master: ");
-      Serial.println(Master);
-      Serial.println();
-      Serial.print("PasscodeLength: ");
-      Serial.println(PasscodeLength);
-      Serial.print("DataCount: ");
-      Serial.println(data_count);
+      if (EnableDebug) {
+        Serial.println();
+        Serial.print("Data:   ");
+        Serial.println(Data);
+        Serial.print("Master: ");
+        Serial.println(Master);
+        Serial.println();
+        Serial.print("PasscodeLength: ");
+        Serial.println(PasscodeLength);
+        Serial.print("DataCount: ");
+        Serial.println(data_count);
+      }
       CodeIncorrect();
     }
   lcd.clear();
@@ -234,8 +252,10 @@ void CloseLock() {
   }
   LockState = false;
   lcd.clear();
-  Serial.println();
-  Serial.println("Closing");
+  if (EnableDebug) {
+    Serial.println();
+    Serial.println("Closing");
+  }
   TimeLastActivity = millis();
 }
 
@@ -243,7 +263,7 @@ void GetEepromCode() {
    EEPROM.get(0, Eeprom_PasscodeLength);
    if (Eeprom_PasscodeLength) {
       NewPasscodeLength = Eeprom_PasscodeLength;
-      for (unsigned char i = 0; i < PasscodeLength; i++) {
+      for (unsigned char i = 0; i < Eeprom_PasscodeLength; i++) {
         EEPROM.get(i + 1, Master[i]);
       }
    }
@@ -262,10 +282,16 @@ void WriteEepromCode(){
 }
 
 void CheckNewCode() {
-  Serial.print("dataCountBuff1: ");
-  Serial.println(dataCountBuff1);
-  Serial.print("dataCountBuff2: ");
-  Serial.println(dataCountBuff2);
+  if (EnableDebug) {
+    Serial.print("dataCountBuff1: ");
+    Serial.println(dataCountBuff1);
+    Serial.print("dataCountBuff2: ");
+    Serial.println(dataCountBuff2);
+    Serial.print("codeBuff1: ");
+    Serial.println(code_buff1);
+    Serial.print("codeBuff2: ");
+    Serial.println(code_buff2);
+  }  
   if (dataCountBuff1 == dataCountBuff2) {
       if(!strcmp(code_buff1, code_buff2)){
           NewPasscodeLength = dataCountBuff2;
@@ -273,12 +299,15 @@ void CheckNewCode() {
             Master[i] = 0;
           }
           
-          for (unsigned char i = 0; i <= PasscodeLength; i++) {
+          for (unsigned char i = 0; i <= NewPasscodeLength; i++) {
             Master[i] = code_buff1[i];
           }
-          Serial.println();
-          Serial.print("Master: ");
-          Serial.println(Master);
+
+          if (EnableDebug) {
+            Serial.println();
+            Serial.print("Master: ");
+            Serial.println(Master);
+          }
           lcd.clear();
           lcd.print("Passcodes Match");
           _delay_ms(1000);
@@ -289,8 +318,10 @@ void CheckNewCode() {
         lcd.clear();
         lcd.setCursor(0,0);
         lcd.print("Codes do not match");
-        Serial.println();
-        Serial.println("Passcodes do not match");
+        if (EnableDebug) {
+          Serial.println();
+          Serial.println("Passcodes do not match");
+        }
         _delay_ms(1000);
         lcd.clear();
      }
@@ -300,8 +331,10 @@ void CheckNewCode() {
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("Codes do not match");
-    Serial.println();
-    Serial.println("Passcodes are not the same length");
+    if (EnableDebug) {
+      Serial.println();
+      Serial.println("Passcodes are not the same length");
+    }
     _delay_ms(1000);
     lcd.clear();
   }
@@ -315,8 +348,10 @@ void ChangeCode() {
       code_buff1[i] = 0;
       code_buff2[i] = 0;
     }
-    Serial.println();
-    Serial.println("Changing Master");
+    if (EnableDebug) {
+      Serial.println();
+      Serial.println("Changing Master");
+    }
     lcd.clear();
     lcd.print("Enter new code:");
     lcd.setCursor(0,2);
@@ -350,8 +385,10 @@ void ChangeCode() {
     clearData();
     CheckNewCode();
     PasscodeLength = NewPasscodeLength;
-    Serial.print("PasscodeLength: ");
-    Serial.println(PasscodeLength);
+    if (EnableDebug) {
+      Serial.print("PasscodeLength: ");
+      Serial.println(PasscodeLength);
+    }
     WriteEepromCode();
 }
 
@@ -363,10 +400,12 @@ void setup() {
     Lock.write(180);
   }
   InitializationLCD();
-  Serial.begin(9600);
   TimeLastActivity = millis();
-  Serial.print("LCD Backlight: ");
-  Serial.println(LCDBacklightState);
+  if (EnableDebug) {
+    Serial.begin(9600);
+    Serial.print("LCD Backlight: ");
+    Serial.println(LCDBacklightState);
+  }
 }
 
 void loop() {
