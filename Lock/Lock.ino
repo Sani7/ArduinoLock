@@ -5,16 +5,17 @@
 #include <EEPROM.h>
 
 const bool EnablePasscodeChange = true;
-const bool EnableServo = true;
-const bool EnableDebug = false;
+const bool EnableServo = false;
+const bool EnableDebug = true;
 
-const unsigned long MaxNoActivityMin = 2;
-const unsigned long MaxNoActivityMillis = MaxNoActivityMin * 60000;
-unsigned char PasscodeLength = 4;
+const unsigned long MaxNoActivitySec = 30;
+const unsigned long MaxNoActivityMillis = MaxNoActivitySec * 1000;
+
+unsigned char PasscodeLength;
 unsigned char Eeprom_PasscodeLength = 0;
 const unsigned char MaxPasscodeLength = 19;
 char Data[MaxPasscodeLength];
-char Master[MaxPasscodeLength] = "1234";
+char Master[MaxPasscodeLength];
 
 unsigned char data_count = 0;
 char Key;
@@ -43,12 +44,12 @@ char KeyMap[ROWS][COLS] = {
 byte rowPins[ROWS] = {23, 22, 21, 20};
 byte colPins[COLS] = {19, 18, 8};
 
+Keypad customKeypad = Keypad(makeKeymap(KeyMap), rowPins, colPins, ROWS, COLS);
+
 // set the LCD address to 0x27 for a 20 chars 4 line display
 // Set the pins on the I2C chip used for LCD connections:
 //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
-
-Keypad customKeypad = Keypad(makeKeymap(KeyMap), rowPins, colPins, ROWS, COLS);
 
 Servo Lock;
 
