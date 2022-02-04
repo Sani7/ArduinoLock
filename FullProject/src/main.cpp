@@ -78,8 +78,9 @@ void setup()
   if (EnableDebug)
   {
     Serial.begin(9600);
-    printDebug(&USBserial, "LCD Backlight: 1");
   }
+  printDebug(&USBserial, "LCD Backlight: 1");
+
 }
 
 void loop()
