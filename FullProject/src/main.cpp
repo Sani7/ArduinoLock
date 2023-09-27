@@ -10,9 +10,9 @@
 #define EnableDebug true
 
 #ifdef EnableDebug
-#define printDebug(fp, fmt, ...) fprintf(fp, fmt, ##__VA_ARGS__)
+#define printDebug(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #else
-#define printDebug(fp, fmt, ...)
+#define printDebug(fmt, ...)
 #endif
 #define MaxNoActivitySec 15
 #define MaxNoActivityMillis MaxNoActivitySec * 1000
@@ -45,8 +45,6 @@ Keypad customKeypad = Keypad(makeKeymap(KeyMap), rowPins, colPins, ROWS, COLS);
 //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-int uart_putchar(char c, FILE* stream);
-int uart_getchar(FILE* stream);
 void append(char *s, char c);
 void BackLightTest();
 void InitializationLCD();
@@ -63,15 +61,10 @@ void GetEepromCode();
 void WriteEepromCode(char *newcode);
 void ChangeCode();
 
-static FILE USBserial;
-
 void setup()
 {
   // put your setup code here, to run once:
-  USBserial.get = uart_getchar;
-  USBserial.put = uart_putchar;
-  USBserial.flags = _FDEV_SETUP_RW;
-
+  printf("Starting\n");
   GetEepromCode();
   InitializationLCD();
   TimeLastActivity = millis();
@@ -79,7 +72,7 @@ void setup()
   {
     Serial.begin(9600);
   }
-  printDebug(&USBserial, "LCD Backlight: 1");
+  printDebug("LCD Backlight: 1");
 
 }
 
@@ -128,16 +121,6 @@ void loop()
   }
 }
 
-int uart_putchar(char c, FILE* stream)
-{
-	return Serial.write(c);
-}
-
-int uart_getchar(FILE* stream)
-{
-	return Serial.read();
-}
-
 void append(char *s, char c)
 {
   int len = strlen(s);
@@ -175,6 +158,7 @@ void InitializationLCD()
 
 void Backlight(bool state)
 {
+  printf("Backlight: %d\n", state);
   if (state)
   {
     lcd.backlight();
@@ -198,7 +182,6 @@ void ActivityCheck()
   if ((TimeNoActivity > MaxNoActivityMillis))
   {
     Backlight(false);
-    printDebug(&USBserial, "LCD BackLight: 0");
   }
 }
 
@@ -206,7 +189,6 @@ void ActivityReset()
 {
   TimeLastActivity = millis();
   Backlight(true);
-  printDebug(&USBserial, "LCD BackLight: 1");
 }
 
 void GetCode(char *code, char PressedKey)
@@ -217,14 +199,14 @@ void GetCode(char *code, char PressedKey)
   lcd.setCursor(strlen(code), 1);
   lcd.print("*");
   append(code, PressedKey);
-  printDebug(&USBserial, "\nData: %c", code[strlen(code) - 1]);
+  printDebug("\nData: %c", code[strlen(code) - 1]);
 
   if (!(strlen(code) < MaxPasscodeLength))
   {
     lcd.setCursor(0, 3);
     lcd.print("Passcode Overflow");
     memset(code, 0, MaxPasscodeLength);
-    printDebug(&USBserial, "\nPasscode Overflow Error\n");
+    printDebug("\nPasscode Overflow Error\n");
     _delay_ms(1000);
     lcd.clear();
   }
@@ -237,7 +219,7 @@ void CodeCorrect()
   lcd.print("Correct");
   LockState = true;
   _delay_ms(1000);
-  printDebug(&USBserial, "\nOpened\n");
+  printDebug("\nOpened\n");
 }
 
 void CodeIncorrect()
@@ -245,7 +227,7 @@ void CodeIncorrect()
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Incorrect");
-  printDebug(&USBserial, "Incorrect PSWD\n");
+  printDebug("Incorrect PSWD\n");
   LockState = false;
   _delay_ms(1000);
 }
@@ -254,7 +236,7 @@ void CodeIncorrect()
 */
 bool CheckCode(char *Data1, char *Data2)
 {
-  printDebug(&USBserial, "Data:   %s\nData len: %d\nMaster: %s\nMaster len: %d\n", Data1, strlen(Data1), Data2, strlen(Data2));
+  printDebug("Data:   %s\nData len: %d\nMaster: %s\nMaster len: %d\n", Data1, strlen(Data1), Data2, strlen(Data2));
 
   if (strlen(Data1) == strlen(Data2))
   {
@@ -283,7 +265,7 @@ void CloseLock()
 {
   LockState = false;
   lcd.clear();
-  printDebug(&USBserial, "Closing\n");
+  printDebug("Closing\n");
 }
 
 void GetEepromCode()
@@ -315,7 +297,7 @@ void ChangeCode()
   char Key;
   memset(code_buff1, 0, sizeof(code_buff1));
   memset(code_buff2, 0, sizeof(code_buff2));
-  printDebug(&USBserial, "Changing master\n");
+  printDebug("Changing master\n");
   lcd.clear();
   lcd.print("Enter new code:");
   lcd.setCursor(0, 2);
@@ -342,7 +324,7 @@ void ChangeCode()
   {
     strncpy(Master, code_buff1, sizeof(Master));
     WriteEepromCode(Master);
-    printDebug(&USBserial, "New master: %s\n", Master);
+    printDebug("New master: %s\n", Master);
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Codes match");
